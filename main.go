@@ -45,7 +45,6 @@ func sendUserDataEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendMessage(messageR events.UserDataEvent, eventType string) error {
-	//TODO continue the update here.
 	message := fmt.Sprintf("{\"nodeId\": \"%s\", \"userId\": \"%s\", \"username\": \"%s\", \"status\": \"%s\", \"comment\": \"%s\", \"receiveUpdates\": %v}",
 		messageR.NodeId, messageR.UserId, messageR.Username, messageR.Status, messageR.Comment, messageR.ReceiveUpdates)
 	if err := s.SendMessage(message, eventType); err != nil {
