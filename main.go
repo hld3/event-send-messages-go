@@ -8,14 +8,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/hld3/event-common-go/events"
 	"github.com/hld3/event-send-messages-go/sender"
 )
-
-type UserDataEvent struct {
-	NodeId   string `json:"nodeId"`
-	UserId   string `json:"userId"`
-	Username string `json:"username"`
-}
 
 var s *sender.RabbitMQSender
 
@@ -37,7 +32,7 @@ func main() {
 }
 
 func sendUserDataEvent(w http.ResponseWriter, r *http.Request) {
-	var message UserDataEvent
+	var message events.UserDataEvent
 	err := json.NewDecoder(r.Body).Decode(&message)
 	if err != nil {
 		log.Println("Error parsing the request:", err)
@@ -49,12 +44,13 @@ func sendUserDataEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func sendMessage(messageR UserDataEvent, eventType string) error {
-	message := fmt.Sprintf("{\"nodeId\": \"%s\", \"userId\": \"%s\", \"username\": \"%s\"}", messageR.NodeId, messageR.UserId, messageR.Username)
+func sendMessage(messageR events.UserDataEvent, eventType string) error {
+	//TODO continue the update here.
+	message := fmt.Sprintf("{\"nodeId\": \"%s\", \"userId\": \"%s\", \"username\": \"%s\", \"status\": \"%s\", \"comment\": \"%s\", \"receiveUpdates\": \"%v\"}",
+		messageR.NodeId, messageR.UserId, messageR.Username, messageR.Status, messageR.Comment, messageR.ReceiveUpdates)
 	if err := s.SendMessage(message, eventType); err != nil {
 		return errors.New(fmt.Sprintf("Failed to send message: %v", err))
 	}
 	log.Printf("Sending message: %s", message)
 	return nil
 }
-
