@@ -24,6 +24,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/userData", sendUserDataEvent)
+	r.HandleFunc("/groupData", sendGroupDataEvent)
 	log.Fatal(http.ListenAndServe(":8080", r))
 	defer s.Close()
 
@@ -32,7 +33,7 @@ func main() {
 }
 
 func sendUserDataEvent(w http.ResponseWriter, r *http.Request) {
-	var message events.UserDataEvent
+	var message events.BaseEvent
 	err := json.NewDecoder(r.Body).Decode(&message)
 	if err != nil {
 		log.Println("Error parsing the request:", err)
@@ -44,12 +45,51 @@ func sendUserDataEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func sendMessage(messageR events.UserDataEvent, eventType string) error {
-	message := fmt.Sprintf("{\"nodeId\": \"%s\", \"userId\": \"%s\", \"username\": \"%s\", \"status\": \"%s\", \"comment\": \"%s\", \"receiveUpdates\": %v}",
-		messageR.NodeId, messageR.UserId, messageR.Username, messageR.Status, messageR.Comment, messageR.ReceiveUpdates)
+func sendGroupDataEvent(w http.ResponseWriter, r *http.Request) {
+	var message events.BaseEvent
+	err := json.NewDecoder(r.Body).Decode(&message)
+	if err != nil {
+		log.Println("Error parsing the request:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Error parsing the request\n"))
+		return
+	}
+	sendMessage(message, "GroupDataEvent")
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func sendMessage(messageR events.BaseEvent, eventType string) error {
+	message := convertMessage(messageR, eventType)
 	if err := s.SendMessage(message, eventType); err != nil {
 		return errors.New(fmt.Sprintf("Failed to send message: %v", err))
 	}
-	log.Printf("Sending message: %s", message)
+	log.Printf("Sending message: %s, of type: %s", message, eventType)
 	return nil
+}
+
+func convertMessage(event events.BaseEvent, eventType string) string {
+	var message string
+	payload, ok := event.Payload.(map[string]interface{})
+
+	if ok {
+		// change to bytes in order to unmarshal in the switch.
+		eventBytes, err := json.Marshal(payload)
+		if err != nil {
+			log.Fatal("Error changing payload to bytes", err)
+		}
+
+		switch eventType {
+		case "UserDataEvent":
+			var userEvent events.UserDataEvent
+			err = json.Unmarshal(eventBytes, &userEvent)
+			message = fmt.Sprintf("{\"nodeId\": \"%s\", \"userId\": \"%s\", \"username\": \"%s\", \"status\": \"%s\", \"comment\": \"%s\", \"receiveUpdates\": %v}",
+				userEvent.NodeId, userEvent.UserId, userEvent.Username, userEvent.Status, userEvent.Comment, userEvent.ReceiveUpdates)
+		case "GroupDataEvent":
+			var groupEvent events.GroupDataEvent
+			err = json.Unmarshal(eventBytes, &groupEvent)
+			message = fmt.Sprintf("{\"name\": \"%s\", \"code\": \"%s\", \"groupId\": \"%s\", \"ownerId\": \"%s\", \"knownLanguage\": \"%s\", \"learningLanguage\": \"%s\"}",
+				groupEvent.Name, groupEvent.Code, groupEvent.GroupId, groupEvent.OwnerId, groupEvent.KnownLanguage, groupEvent.LearningLanguage)
+		}
+	}
+	return message
 }
