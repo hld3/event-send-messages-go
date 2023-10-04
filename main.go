@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/hld3/event-common-go/events"
 	"github.com/hld3/event-send-messages-go/sender"
@@ -69,11 +71,12 @@ func sendMessage(messageR events.BaseEvent, eventType string) error {
 
 func convertMessage(event events.BaseEvent, eventType string) string {
 	var message string
-	payload, ok := event.Payload.(map[string]interface{})
+	payloadI, ok := event.Payload.(map[string]interface{})
 
 	if ok {
+		var payload string
 		// change to bytes in order to unmarshal in the switch.
-		eventBytes, err := json.Marshal(payload)
+		eventBytes, err := json.Marshal(payloadI)
 		if err != nil {
 			log.Fatal("Error changing payload to bytes", err)
 		}
@@ -82,14 +85,19 @@ func convertMessage(event events.BaseEvent, eventType string) string {
 		case "UserDataEvent":
 			var userEvent events.UserDataEvent
 			err = json.Unmarshal(eventBytes, &userEvent)
-			message = fmt.Sprintf("{\"nodeId\": \"%s\", \"userId\": \"%s\", \"username\": \"%s\", \"status\": \"%s\", \"comment\": \"%s\", \"receiveUpdates\": %v}",
+			payload = fmt.Sprintf("{\"nodeId\": \"%s\", \"userId\": \"%s\", \"username\": \"%s\", \"status\": \"%s\", \"comment\": \"%s\", \"receiveUpdates\": %v}",
 				userEvent.NodeId, userEvent.UserId, userEvent.Username, userEvent.Status, userEvent.Comment, userEvent.ReceiveUpdates)
 		case "GroupDataEvent":
 			var groupEvent events.GroupDataEvent
 			err = json.Unmarshal(eventBytes, &groupEvent)
-			message = fmt.Sprintf("{\"name\": \"%s\", \"code\": \"%s\", \"groupId\": \"%s\", \"ownerId\": \"%s\", \"knownLanguage\": \"%s\", \"learningLanguage\": \"%s\"}",
+			payload = fmt.Sprintf("{\"name\": \"%s\", \"code\": \"%s\", \"groupId\": \"%s\", \"ownerId\": \"%s\", \"knownLanguage\": \"%s\", \"learningLanguage\": \"%s\"}",
 				groupEvent.Name, groupEvent.Code, groupEvent.GroupId, groupEvent.OwnerId, groupEvent.KnownLanguage, groupEvent.LearningLanguage)
 		}
+		message = fmt.Sprintf("{\"messageId\": \"%s\", \"dateCode\": \"%v\", \"payload\": %s", randomMessageId(), time.Now().UnixMilli(), payload)
 	}
 	return message
+}
+
+func randomMessageId() uuid.UUID {
+    return uuid.New()
 }
