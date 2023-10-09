@@ -93,7 +93,7 @@ func convertMessage(event events.BaseEvent, eventType string) string {
 			payload = fmt.Sprintf("{\"name\": \"%s\", \"code\": \"%s\", \"groupId\": \"%s\", \"ownerId\": \"%s\", \"knownLanguage\": \"%s\", \"learningLanguage\": \"%s\"}",
 				groupEvent.Name, groupEvent.Code, groupEvent.GroupId, groupEvent.OwnerId, groupEvent.KnownLanguage, groupEvent.LearningLanguage)
 		}
-		message = fmt.Sprintf("{\"messageId\": \"%s\", \"dateCode\": \"%v\", \"payload\": %s", randomMessageId(), time.Now().UnixMilli(), payload)
+		message = fmt.Sprintf("{\"messageId\": \"%s\", \"dateCode\": \"%v\", \"payload\": %s}", randomMessageId(), time.Now().UnixMilli(), payload)
 	}
 	return message
 }
